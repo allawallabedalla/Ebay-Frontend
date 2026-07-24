@@ -305,10 +305,13 @@ function buildKleinanzeigenUrl(filter, page) {
   // Seiten: /seite:{n}/
   if (page > 1) segments.push(`seite:${page}`);
 
-  // Code k0[c{catId}][l{locId}] – catId/locId nur, wenn bekannt.
+  // Code k0[c{catId}][l{locId}][r{radius}] – nur, was bekannt ist.
   let code = 'k0';
   if (kat) code += `c${kat.catId}`;
-  if (ort) code += `l${ort.locId}`;
+  if (ort) {
+    code += `l${ort.locId}`;
+    if (filter.radius_km != null) code += `r${filter.radius_km}`;
+  }
   segments.push(code);
 
   return `https://www.kleinanzeigen.de/${segments.join('/')}`;
