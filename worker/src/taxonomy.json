@@ -1,0 +1,29 @@
+{
+  "_hinweis": "Leicht erweiterbar: neue Orte unter 'orte', neue Kategorien unter 'kategorien' eintragen. Das Matching ist case-insensitive und trifft auf 'label' sowie beliebige 'aliase'. Die kleinanzeigen.de-URL wird gebaut als /s-{slug}/{ort}/.../k0c{catId}l{locId}.",
+
+  "orte": {
+    "fulda": {
+      "locId": "4878",
+      "slug": "fulda",
+      "label": "Fulda",
+      "aliase": ["fulda", "36037", "36039", "36041", "36043"]
+    }
+  },
+
+  "kategorien": {
+    "monitore": {
+      "catId": "225",
+      "slug": "pc-zubehoer-software",
+      "label": "PC-Zubehör & Software / Monitore",
+      "aliase": [
+        "monitor", "monitore", "bildschirm", "bildschirme", "display",
+        "gaming-monitor", "gaming monitor", "pc-zubehoer", "pc zubehör", "pc-zubehör"
+      ]
+    }
+  },
+
+  "defaults": {
+    "ort": "fulda",
+    "kategorie": "monitore"
+  }
+}

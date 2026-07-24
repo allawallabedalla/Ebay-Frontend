@@ -1,0 +1,7 @@
+name = "kleinanzeigen-suchassistent"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# taxonomy.json wird per import geladen und von Wrangler mitgebundelt.
+# Der ANTHROPIC_API_KEY wird NICHT hier gesetzt, sondern als Secret:
+#   wrangler secret put ANTHROPIC_API_KEY

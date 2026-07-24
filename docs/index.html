@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kleinanzeigen-Suchassistent</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>Kleinanzeigen-Suchassistent</h1>
+      <p class="sub">
+        Natuerliche Sprache rein, begruendet sortierte Treffer raus. Beispiel:
+        <em>„Gaming-Monitor in Fulda, 24–34 Zoll, wenig genutzt, bestes Preis-Leistungs-Verhaeltnis“</em>
+      </p>
+    </header>
+
+    <form id="searchForm" class="search-box">
+      <textarea id="query" rows="2" placeholder="Was suchst du?" autofocus></textarea>
+      <button type="submit" id="submitBtn">Suchen</button>
+    </form>
+
+    <!-- Phasen-Statusanzeige -->
+    <ol id="phases" class="phases" hidden>
+      <li data-phase="parse"><span class="dot"></span> Verstehen</li>
+      <li data-phase="search"><span class="dot"></span> Suchen</li>
+      <li data-phase="rank"><span class="dot"></span> Bewerten</li>
+    </ol>
+
+    <!-- Geparste Filter, editierbar -->
+    <section id="filterCard" class="card" hidden>
+      <h2>Verstanden als:</h2>
+      <div class="filter-grid">
+        <label>Suchbegriff <input id="f_keywords" type="text" /></label>
+        <label>Ort <input id="f_ort" type="text" /></label>
+        <label>Umkreis (km) <input id="f_radius" type="number" min="0" /></label>
+        <label>Kategorie <input id="f_kategorie" type="text" /></label>
+        <label>Preis min (€) <input id="f_preis_min" type="number" min="0" /></label>
+        <label>Preis max (€) <input id="f_preis_max" type="number" min="0" /></label>
+        <label>Zoll min <input id="f_zoll_min" type="number" min="0" /></label>
+        <label>Zoll max <input id="f_zoll_max" type="number" min="0" /></label>
+        <label>Zustand <input id="f_zustand" type="text" /></label>
+        <label>Muss enthalten <input id="f_muss" type="text" placeholder="komma, getrennt" /></label>
+        <label>Darf nicht enthalten <input id="f_nicht" type="text" placeholder="komma, getrennt" /></label>
+      </div>
+      <div class="filter-actions">
+        <button id="runSearchBtn" type="button">Mit diesen Filtern suchen</button>
+        <a id="rawLink" href="#" target="_blank" rel="noopener" hidden>Rohe kleinanzeigen.de-Suche ansehen ↗</a>
+      </div>
+    </section>
+
+    <div id="status" class="status" hidden></div>
+
+    <section id="results" class="results"></section>
+  </main>
+
+  <footer class="foot">
+    <p>
+      Nur manuell ausgeloeste Einzelabfragen. Die AGB von kleinanzeigen.de untersagen
+      automatisierten Zugriff — dieses Werkzeug ist fuer den privaten Gebrauch gedacht.
+    </p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
