@@ -78,41 +78,52 @@ async function post(path, body) {
 // Schritt 1: Verstehen (parse-query) -> Filter zur Bestaetigung anzeigen
 // -------------------------------------------------------------------------
 
+// Hauptbutton „Suchen“: versteht die Anfrage, zeigt das Parameterfeld an UND
+// startet direkt die Suche + Bewertung (ohne extra Bestaetigungsklick).
 el.form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const query = el.query.value.trim();
   if (!query) return;
 
   state.query = query;
-  state.items = [];
-  state.ranked = [];
   el.results.innerHTML = '';
   el.filterCard.hidden = true;
   clearStatus();
   resetPhases();
   lock(true);
 
+  let filter;
   try {
     setPhase('parse', 'active');
-    const filter = await post('/parse-query', { query });
+    filter = await post('/parse-query', { query });
     state.filter = filter;
     setPhase('parse', 'done');
     fillFilterForm(filter);
-    el.filterCard.hidden = false;
+    el.filterCard.hidden = false; // Parameterfeld sofort einblenden
   } catch (err) {
     showStatus(`Konnte die Anfrage nicht verstehen: ${err.message}`, true);
-  } finally {
     lock(false);
+    return;
   }
+
+  // Direkt weiter mit Suchen + Bewerten. Falls du danach etwas aenderst,
+  // startet der Button in der Karte die Suche erneut.
+  await performSearch(readFilterForm());
+});
+
+// Button in der Filter-Karte: nach manueller Aenderung erneut suchen.
+el.runSearch.addEventListener('click', () => {
+  performSearch(readFilterForm());
 });
 
 // -------------------------------------------------------------------------
-// Schritt 2+3: Suchen (search) und Bewerten (rank)
+// Suchen (search) + Bewerten (rank) — gemeinsame Logik
 // -------------------------------------------------------------------------
 
-el.runSearch.addEventListener('click', async () => {
-  const filter = readFilterForm();
+async function performSearch(filter) {
   state.filter = filter;
+  state.items = [];
+  state.ranked = [];
   el.results.innerHTML = '';
   clearStatus();
   lock(true);
@@ -129,8 +140,7 @@ el.runSearch.addEventListener('click', async () => {
     setPhase('search', 'done');
 
     if (state.items.length === 0) {
-      showStatus('Keine Treffer gefunden. Versuch andere Filter oder einen breiteren Suchbegriff.');
-      resetPhases();
+      showStatus('Keine Treffer gefunden. Passe die Filter an (z. B. breiterer Suchbegriff) und suche erneut.');
       return;
     }
 
@@ -156,7 +166,7 @@ el.runSearch.addEventListener('click', async () => {
   } finally {
     lock(false);
   }
-});
+}
 
 // -------------------------------------------------------------------------
 // Filter-Formular <-> Objekt
