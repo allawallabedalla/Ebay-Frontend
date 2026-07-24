@@ -137,7 +137,7 @@ in strukturierte Filter uebersetzt. Antworte AUSSCHLIESSLICH mit einem JSON-Obje
 ohne Markdown-Fences, ohne Erklaerung. Das Schema ist exakt:
 
 {
-  "keywords": string,            // knapper Suchbegriff fuer die URL, z.B. "gaming monitor"
+  "keywords": string,            // BREITER, marktueblicher Suchbegriff (1-2 Woerter, nur Kern-Substantiv)
   "ort": string|null,            // Ortsname, z.B. "Fulda", sonst null
   "radius_km": number|null,      // Umkreis in km, sonst null
   "preis_min": number|null,      // Mindestpreis in Euro, sonst null
@@ -153,9 +153,23 @@ ohne Markdown-Fences, ohne Erklaerung. Das Schema ist exakt:
 
 Regeln:
 - Extrahiere nur, was tatsaechlich in der Anfrage steht; erfinde nichts.
-- "keywords" enthaelt das Kern-Produkt, keine Orte/Preise/Zustaende.
-- Wuensche wie "bestes Preis-Leistungs-Verhaeltnis" sind KEINE Filter, ignoriere sie hier.
+- "keywords" ist der wichtigste Hebel. Waehle einen BREITEN, marktueblichen
+  Suchbegriff, wie ihn Verkaeufer im Anzeigentitel schreiben. So allgemein wie
+  moeglich (Ziel: viele Treffer), meist nur 1-2 Woerter, nur das Kern-Substantiv.
+  KEINE Adjektive (nicht "gaming", "curved", "4k"), KEINE Zoll/Groessen, KEINE
+  Zustaende, KEINE Wunschfloskeln. All das kommt in soft_filter bzw. wird erst
+  beim Ranking angewendet.
+  Beispiele:
+    "Gaming-Monitor in Fulda, 24-34 Zoll, wenig genutzt" -> keywords: "monitor"
+    "guenstiges iPhone 13 Pro mit wenig Gebrauchsspuren"  -> keywords: "iphone 13"
+    "gebrauchtes Trekking-Herrenrad, 28 Zoll"             -> keywords: "fahrrad"
+- "muss_enthalten": nur echte Pflichtbegriffe (z.B. ein konkretes Modell, das
+  zwingend vorkommen muss). Adjektive wie "gaming" gehoeren NICHT hierher, sonst
+  werden passende Anzeigen zu Unrecht ausgeschlossen. Solche Praeferenzen fliessen
+  ueber die Original-Anfrage automatisch ins Ranking ein.
+- Wuensche wie "bestes Preis-Leistungs-Verhaeltnis" sind KEINE Filter.
 - Zollangaben wie "24-34 Zoll" gehoeren nach groesse_zoll [24, 34].
+- Zustand ("wenig genutzt", "neu", "defekt") gehoert nach soft_filter.zustand.
 - Arrays niemals null, sondern [] wenn leer.`;
 
 async function handleParseQuery(request, env) {
