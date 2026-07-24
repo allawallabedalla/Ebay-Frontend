@@ -111,6 +111,24 @@ und **PC-Zubehör/Monitore (`c225`)** hinterlegt. Neue Einträge einfach unter
 
 ---
 
+## Sicherheit / Missbrauchsschutz
+
+Der Worker ist über eine öffentliche URL erreichbar. Absicherung in drei Stufen:
+
+1. **Anthropic-Ausgabenlimit (wichtigster Schutz):** In der Anthropic Console ein
+   monatliches Spend-Limit setzen. Das ist die einzige harte Kostengrenze — bitte
+   unbedingt setzen.
+2. **CORS + App-Token:** Der Worker akzeptiert nur Anfragen von der eigenen
+   GitHub-Pages-Domain (`ALLOWED_ORIGIN`) und mit passendem Header `x-app-token`
+   (`APP_TOKEN`). Der Token steht sowohl im Worker (`APP_TOKEN`) als auch im
+   Frontend (`docs/app.js`) und muss **identisch** sein. Er ist im öffentlichen
+   Frontend sichtbar und daher **kein echtes Geheimnis** — er filtert nur
+   zufälligen Fremd-Traffic/Bots ab. Willst du ihn ändern, an **beiden** Stellen
+   anpassen und Worker neu deployen.
+3. Ein echtes Rate-Limit bräuchte eine eigene Domain (Cloudflare Rate Limiting
+   Rules) oder das Workers-Rate-Limit-Binding — für ein privates Tool i. d. R.
+   unnötig.
+
 ## Rechtliches / Fair Use
 
 Die AGB von kleinanzeigen.de untersagen automatisierten Zugriff. Dieses Werkzeug ist

@@ -5,6 +5,10 @@
  * ========================================================================== */
 const WORKER_URL = 'https://kleinanzeigen-suchassisten.abseits.workers.dev';
 
+// Muss mit APP_TOKEN im Worker uebereinstimmen. KEIN echtes Geheimnis (im
+// oeffentlichen Frontend sichtbar) – nur ein einfacher Bot-/Fremd-Traffic-Filter.
+const APP_TOKEN = 'ka-suche-2f9c7a';
+
 /* -------------------------------------------------------------------------- */
 
 // Letzte Suche im Speicher halten (kein localStorage noetig).
@@ -64,7 +68,7 @@ function clearStatus() {
 async function post(path, body) {
   const res = await fetch(`${WORKER_URL}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-app-token': APP_TOKEN },
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));

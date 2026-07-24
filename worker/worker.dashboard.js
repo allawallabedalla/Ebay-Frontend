@@ -40,6 +40,13 @@ const MODEL = 'claude-sonnet-5';
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_VERSION = '2023-06-01';
 
+// Frontend-Herkunft (GitHub Pages) + einfacher App-Token. Der Token steht im
+// oeffentlichen Frontend-Code und ist KEIN echtes Geheimnis – er filtert nur
+// zufaelligen Fremd-Traffic/Bots. Echter Kostenschutz = Ausgabenlimit in der
+// Anthropic Console.
+const ALLOWED_ORIGIN = 'https://allawallabedalla.github.io';
+const APP_TOKEN = 'ka-suche-2f9c7a';
+
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
@@ -49,17 +56,17 @@ export default {
     if (request.method === 'OPTIONS') return preflight();
     const url = new URL(request.url);
     try {
-      if (request.method === 'POST' && url.pathname === '/parse-query') {
-        return json(await handleParseQuery(request, env));
-      }
-      if (request.method === 'POST' && url.pathname === '/search') {
-        return json(await handleSearch(request, env));
-      }
-      if (request.method === 'POST' && url.pathname === '/rank') {
-        return json(await handleRank(request, env));
-      }
       if (request.method === 'GET' && url.pathname === '/') {
         return json({ ok: true, service: 'kleinanzeigen-suchassistent', model: MODEL });
+      }
+      if (request.method === 'POST') {
+        // Einfache Zugriffskontrolle (Casual-Filter, siehe APP_TOKEN oben).
+        if (request.headers.get('x-app-token') !== APP_TOKEN) {
+          return json({ error: 'forbidden' }, 403);
+        }
+        if (url.pathname === '/parse-query') return json(await handleParseQuery(request, env));
+        if (url.pathname === '/search') return json(await handleSearch(request, env));
+        if (url.pathname === '/rank') return json(await handleRank(request, env));
       }
       return json({ error: 'not_found' }, 404);
     } catch (err) {
@@ -69,9 +76,9 @@ export default {
 };
 
 const CORS = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, x-app-token',
   'Access-Control-Max-Age': '86400',
 };
 
@@ -291,7 +298,7 @@ function buildKleinanzeigenUrl(filter, page) {
   if (kat) code += `c${kat.catId}`;
   if (ort) {
     code += `l${ort.locId}`;
-    if (filter.radius_km != null) code += `r${filter.radius_km}`;
+    if (filter.radius_km != null) code += `r${snapRadius(filter.radius_km)}`;
   }
   segments.push(code);
 
@@ -317,6 +324,15 @@ function matchTaxonomy(map, name) {
   }
   return null;
 }
+// kleinanzeigen erlaubt nur bestimmte Umkreis-Werte – auf den naechsten snappen.
+const ALLOWED_RADIUS = [5, 10, 20, 30, 50, 100, 150, 200];
+function snapRadius(km) {
+  return ALLOWED_RADIUS.reduce(
+    (best, r) => (Math.abs(r - km) < Math.abs(best - km) ? r : best),
+    ALLOWED_RADIUS[0],
+  );
+}
+
 function slugify(s) {
   return (s || '')
     .toLowerCase()
@@ -391,6 +407,14 @@ class ListingParser {
 
 function clean(s) { return (s || '').replace(/\s+/g, ' ').trim(); }
 
+function safeAdUrl(href) {
+  if (!href) return null;
+  if (href.startsWith('/')) return `https://www.kleinanzeigen.de${href}`;
+  if (href.startsWith('https://www.kleinanzeigen.de')) return href;
+  if (!/^https?:\/\//i.test(href)) return `https://www.kleinanzeigen.de/${href}`;
+  return null; // fremde absolute URL -> verwerfen
+}
+
 function normalizeItem(raw) {
   const tags = [...(raw._tags || [])];
   if (raw._tagBuf && raw._tagBuf.trim()) tags.push(raw._tagBuf.trim());
@@ -399,10 +423,8 @@ function normalizeItem(raw) {
   const { preis, preis_typ } = parsePreis(raw._preisRaw);
   const { plz, ort } = parseOrt(raw._ortRaw);
 
-  const href = raw._href || '';
-  const url = href.startsWith('http')
-    ? href
-    : (href ? `https://www.kleinanzeigen.de${href.startsWith('/') ? '' : '/'}${href}` : null);
+  // Link-Ziel absichern: ausschliesslich kleinanzeigen.de-URLs zulassen.
+  const url = safeAdUrl(raw._href);
 
   return {
     id: raw.id,
@@ -435,7 +457,7 @@ function parseOrt(rawIn) {
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
-const RANK_BATCH_SIZE = 40;
+const RANK_BATCH_SIZE = 25;
 
 const RANK_SYSTEM = `Du bist ein kritischer Einkaufsassistent fuer kleinanzeigen.de.
 Du bekommst eine urspruengliche Nutzeranfrage, weiche Filter (soft_filter) und
@@ -490,13 +512,25 @@ async function handleRank(request, env) {
       const raw = await callClaude(env, { system: RANK_SYSTEM, user, maxTokens: 4000 });
       return JSON.parse(stripToJson(raw));
     };
-    let parsed;
+    let parsed = null;
     try {
       parsed = await runOnce();
     } catch (_e) {
-      parsed = await runOnce();
+      try { parsed = await runOnce(); } catch (_e2) { parsed = null; }
     }
-    if (Array.isArray(parsed)) rankings.push(...parsed);
+    if (Array.isArray(parsed)) {
+      rankings.push(...parsed);
+    } else {
+      // Batch fehlgeschlagen -> Treffer ungeprueft durchreichen (nicht verwerfen).
+      for (const it of batch) {
+        rankings.push({
+          id: it.id,
+          score: 0,
+          begruendung: 'Automatische Bewertung nicht verfuegbar – ungeprueft.',
+          unklar: true,
+        });
+      }
+    }
   }
 
   const merged = [];
