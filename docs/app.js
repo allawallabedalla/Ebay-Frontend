@@ -3,7 +3,7 @@
  *
  * ▶ HIER die eigene Worker-URL eintragen (nach `wrangler deploy`):
  * ========================================================================== */
-const WORKER_URL = 'https://kleinanzeigen-suchassistent.DEIN-SUBDOMAIN.workers.dev';
+const WORKER_URL = 'https://kleinanzeigen-suchassisten.abseits.workers.dev';
 
 /* -------------------------------------------------------------------------- */
 
