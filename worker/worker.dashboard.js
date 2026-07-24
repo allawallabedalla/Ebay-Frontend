@@ -256,16 +256,28 @@ async function handleSearch(request, env) {
 }
 
 function buildKleinanzeigenUrl(filter, page) {
-  const ort = matchOrt(filter.ort);
-  const kat = matchKategorie(filter.kategorie || filter.keywords);
+  const ort = matchOrt(filter.ort);                                 // {locId, slug} | null
+  const kat = matchKategorie(filter.kategorie || filter.keywords);  // {catId, slug} | null
 
-  const slug = kat ? kat.slug : 's';
-  const ortSlug = ort ? ort.slug : (filter.ort ? slugify(filter.ort) : '');
-  const keywords = slugify(filter.keywords || (filter.kategorie || ''));
+  const kwSlug = slugify(filter.keywords || filter.kategorie || '');
+  const citySlug = ort ? ort.slug : (filter.ort ? slugify(filter.ort) : '');
 
-  const segments = [`s-${slug}`];
-  if (ortSlug) segments.push(ortSlug);
-  if (keywords) segments.push(keywords);
+  // Leitenden SEO-Slug bestimmen. Kategorie NUR setzen, wenn wir sie kennen –
+  // sonst kategorieuebergreifend suchen (kein erzwungenes c225).
+  const segments = [];
+  let kwUsedAsLead = false;
+  if (kat) {
+    segments.push(`s-${kat.slug}`);
+    if (citySlug) segments.push(citySlug);
+  } else if (citySlug) {
+    segments.push(`s-${citySlug}`);
+  } else if (kwSlug) {
+    segments.push(`s-${kwSlug}`);
+    kwUsedAsLead = true;
+  } else {
+    segments.push('s');
+  }
+  if (kwSlug && !kwUsedAsLead) segments.push(kwSlug);
 
   if (filter.preis_min != null || filter.preis_max != null) {
     const min = filter.preis_min != null ? filter.preis_min : '';
@@ -274,18 +286,22 @@ function buildKleinanzeigenUrl(filter, page) {
   }
   if (page > 1) segments.push(`seite:${page}`);
 
-  const catId = kat ? kat.catId : '0';
-  const locId = ort ? ort.locId : '';
-  segments.push(`k0c${catId}${locId ? 'l' + locId : ''}`);
+  // Code k0[c{catId}][l{locId}] – catId/locId nur, wenn bekannt.
+  let code = 'k0';
+  if (kat) code += `c${kat.catId}`;
+  if (ort) code += `l${ort.locId}`;
+  segments.push(code);
 
   return `https://www.kleinanzeigen.de/${segments.join('/')}`;
 }
 
 function matchOrt(name) {
-  return matchTaxonomy(taxonomy.orte, name) || taxonomy.orte[taxonomy.defaults.ort] || null;
+  // null, wenn unbekannt -> keine Orts-ID erzwingen (Textsuche ohne Umkreis).
+  return matchTaxonomy(taxonomy.orte, name);
 }
 function matchKategorie(name) {
-  return matchTaxonomy(taxonomy.kategorien, name) || taxonomy.kategorien[taxonomy.defaults.kategorie] || null;
+  // null, wenn unbekannt -> kategorieuebergreifend suchen.
+  return matchTaxonomy(taxonomy.kategorien, name);
 }
 function matchTaxonomy(map, name) {
   if (!name) return null;
